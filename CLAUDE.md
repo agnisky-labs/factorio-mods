@@ -45,7 +45,9 @@ small, tested, checked in the real game, and every word a player reads is approv
 
 - The version lives only in `info.json`. `npm run version` sets it and opens a dated section in `changelog.txt`; tests fail while
   a category is empty or the top section isn't the `info.json` version.
-- Tags are `<mod>/v<version>`; pushing one runs the Release workflow. The `/release` skill prepares it.
+- Releases come from the Release workflow: Run workflow on GitHub with the mod picked (it creates the tag `<mod>/v<version>`),
+  or a pushed tag. The zip is always `<mod>_<version>.zip` from `info.json`. The `/release` skill prepares everything before it.
+- A new mod goes in the Release workflow's `mod` dropdown too (`tests/workflows.test.mjs` checks).
 
 ## A new Factorio version
 

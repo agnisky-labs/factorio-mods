@@ -21,4 +21,4 @@ A mod is a folder under `mods/`; the scripts, tests and CI find it by its `info.
    base only and with Space Age. `npm test` then runs them, and the generic checks in `tests/mods.test.mjs` cover info.json, the
    changelog and the locale.
 4. **Check:** `npm test`, `npm run package -- <name>`, and `npm run link -- <name>` to try it in the game.
-5. Add the mod to the table in the root `README.md`.
+5. Add the mod to the table in the root `README.md`, and to the `mod` dropdown (`options:`) in `.github/workflows/release.yml`.

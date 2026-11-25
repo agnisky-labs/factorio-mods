@@ -1,8 +1,9 @@
-# A GitHub Release of one mod, from a tag <mod>/v<version> (for example bulk-materials/v1.0.2) pushed by hand. It checks that the tag
-# names the version in the mod's info.json and that changelog.txt has its section, runs CI on the tagged commit, then publishes the
-# release with the zip attached and the changelog section as notes. The mod portal upload stays by hand.
-# Run by hand (workflow_dispatch) with a tag that exists, it's a dry run: everything but the release itself (its CI runs on the branch
-# picked in the Run workflow form, the checks and the zip on the tag).
+# A GitHub Release of one mod, with <mod>_<version>.zip and its changelog section as notes. Started either way:
+#   - Actions, Release, Run workflow: pick the mod (the version comes from its info.json); the tag <mod>/v<version> is created on
+#     the release commit. Real releases only from main; "dry run" builds and checks everything but publishes nothing.
+#   - pushing a tag <mod>/v<version> yourself.
+# It checks the version matches info.json, the changelog has its section and the version isn't released yet, runs CI, then publishes.
+# The mod portal upload stays by hand.
 name: Release
 
 on:
@@ -10,13 +11,18 @@ on:
     tags: ['*/v*']
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'An existing tag <mod>/v<version>: a dry run that builds and checks it but publishes nothing'
-        type: string
-        required: true
+      mod:
+        description: 'The mod to release (its version is the one in info.json)'
+        type: choice
+        # Every folder under mods/; tests/workflows.test.mjs keeps this list in step.
+        options: [bulk-materials]
+      dry-run:
+        description: 'Dry run: build and check everything, publish nothing'
+        type: boolean
+        default: false
 
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release-${{ inputs.mod || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -24,44 +30,67 @@ permissions:
 
 jobs:
   check:
-    name: Check the tag
+    name: Check the version
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      mod: ${{ steps.tag.outputs.mod }}
-      version: ${{ steps.tag.outputs.version }}
+      mod: ${{ steps.version.outputs.mod }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
 
-      - name: The tag, info.json and the changelog agree
-        id: tag
+      - name: The version, info.json, the changelog and earlier releases agree
+        id: version
         env:
-          TAG: ${{ inputs.tag || github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          TAG_NAME: ${{ github.ref_name }}
+          INPUT_MOD: ${{ inputs.mod }}
+          DRY_RUN: ${{ inputs.dry-run }}
         run: |
-          if [[ ! "$TAG" =~ ^([a-z0-9_-]+)/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            echo "The tag '$TAG' is not <mod>/v<x.y.z>." >&2
-            exit 1
+          if [ "$EVENT" = "push" ]; then
+            if [[ ! "$TAG_NAME" =~ ^([a-z0-9_-]+)/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+              echo "The tag '$TAG_NAME' is not <mod>/v<x.y.z>." >&2
+              exit 1
+            fi
+            MOD="${BASH_REMATCH[1]}"
+            VERSION="${BASH_REMATCH[2]}"
+          else
+            MOD="$INPUT_MOD"
+            if [ "$DRY_RUN" != "true" ] && [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "Real releases run from main (this run is on $GITHUB_REF). Tick dry run to try another branch." >&2
+              exit 1
+            fi
           fi
-          MOD="${BASH_REMATCH[1]}"
-          VERSION="${BASH_REMATCH[2]}"
           if [ ! -f "mods/$MOD/info.json" ]; then
             echo "No mod '$MOD' under mods/." >&2
             exit 1
           fi
           ACTUAL=$(node -p "require('./mods/$MOD/info.json').version")
+          VERSION="${VERSION:-$ACTUAL}"
           if [ "$VERSION" != "$ACTUAL" ]; then
             echo "The tag says $VERSION, mods/$MOD/info.json says $ACTUAL." >&2
             exit 1
           fi
           npm run -s changelog -- "$MOD" "$VERSION" > /dev/null
+          TAG="$MOD/v$VERSION"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "$TAG is already released. Bump the version first (npm run version)." >&2
+            exit 1
+          fi
+          if [ "$EVENT" != "push" ] && git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            echo "The tag $TAG already exists without a release. Push it again or delete it, then rerun." >&2
+            exit 1
+          fi
+          echo "Releasing $MOD $VERSION as $TAG from $GITHUB_SHA."
           echo "mod=$MOD" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
   ci:
     name: CI
@@ -77,8 +106,6 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-node@v7
         with:
@@ -97,13 +124,20 @@ jobs:
           ls -l "dist/${MOD}_${VERSION}.zip"
           cat "$RUNNER_TEMP/notes.md"
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: dist/*.zip
+          retention-days: 14
+
+      # On a tag push the tag exists; from the button, gh creates it on this commit.
       - name: Publish
-        if: github.event_name == 'push'
+        if: ${{ !inputs.dry-run }}
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
           MOD: ${{ needs.check.outputs.mod }}
           VERSION: ${{ needs.check.outputs.version }}
+          TAG: ${{ needs.check.outputs.tag }}
         run: |
           TITLE="$(node -p "require('./mods/$MOD/info.json').title") $VERSION"
-          gh release create "$TAG" "dist/${MOD}_${VERSION}.zip" --verify-tag --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" "dist/${MOD}_${VERSION}.zip" --target "$GITHUB_SHA" --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"

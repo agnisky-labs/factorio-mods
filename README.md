@@ -31,11 +31,14 @@ Lua linting (luacheck) only runs on GitHub.
 1. `npm run version -- bulk-materials patch` (or minor, major, x.y.z). This sets the version in `info.json` and adds a section
    to `changelog.txt`.
 2. Fill in the changelog, then `npm test`.
-3. Commit, tag `bulk-materials/v<version>` and push the tag. GitHub builds the release with the zip.
-4. Upload the zip to the mod portal.
+3. Commit and merge to main.
+4. On GitHub, Actions, Release, Run workflow, and pick the mod. It tags `bulk-materials/v<version>`, runs the checks and
+   creates the release with `bulk-materials_<version>.zip`. Tick dry run to check everything without releasing. Pushing the
+   tag yourself does the same.
+5. Upload the zip to the mod portal.
 
 ## New Factorio versions
 
-`npm run api-diff -- <old> <new> --mod bulk-materials` writes a report of the modding changes between two Factorio versions,
+`npm run api-diff -- <old> <new> bulk-materials` writes a report of the modding changes between two Factorio versions,
 from the API docs and the game's changelog, starting with the ones that touch what the mod uses. Reports are kept in
 [docs/factorio-updates](docs/factorio-updates/).

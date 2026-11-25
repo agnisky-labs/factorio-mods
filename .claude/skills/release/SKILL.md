@@ -21,6 +21,7 @@ Never push. Commits carry no AI attribution line.
 7. **In the game,** by the maintainer, with `npm run link -- <mod>` and any `<mod>_*.zip` moved out of the mods folder: the settings
    show their names and descriptions, and the changed behaviour works (for Bulk Materials: an assembler on gears shows the
    multiplied output and the right time, with and without Space Age).
-8. **Commit and tag,** once asked: commit `Release <mod> <version>`, then `git tag <mod>/v<version>`.
-9. **What's left for the maintainer:** `git push` and `git push origin <mod>/v<version>` (the Release workflow builds the GitHub
-   Release), then upload the zip from the release to https://mods.factorio.com/.
+8. **Commit,** once asked: `Release <mod> <version>`. No tag: the workflow makes it.
+9. **What's left for the maintainer:** push and merge to `main`, then on GitHub Actions, Release, Run workflow with the mod
+   picked (a dry run first if anything in the workflow changed). It tags `<mod>/v<version>`, runs CI and publishes the GitHub
+   Release with `<mod>_<version>.zip`. Then upload that zip to https://mods.factorio.com/.
