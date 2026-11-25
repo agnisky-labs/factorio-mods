@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "title": "Bulk Materials",
   "author": "Agentwhisky",
-  "description": "Adds item production and speed multipliers for certain items. These include [gears, sticks, steel, concrete, engines, artificial soil, quantum processors] and [red, green, and blue circuits].",
+  "description": "Adds production and speed multipliers for gears, iron sticks, steel, concrete, engines, electric engines, low density structures, flying robot frames, sulfur, and red, green and blue circuits. With Space Age, also artificial soil and quantum processors. Each item has its own setting.",
   "factorio_version": "2.1",
   "dependencies": ["base >= 2.1.0", "? space-age >= 2.1.0", "(?) factorioplus >= 2.0.0"]
 }
