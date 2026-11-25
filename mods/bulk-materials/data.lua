@@ -1,15 +1,12 @@
 local items = require("__bulk-materials__.items")
 
---- Getting individual settings
+--- Startup settings
 local normalize_weight = settings.startup['enable-normalized-rocket-weight'].value
-
---- Setting Get Functions
-local function get_output_multiplier(name)
-    return settings.startup[name .. "-output-multiplier"].value or 1
-end
-
-local function get_speed_multiplier(name)
-    return settings.startup[name .. "-speed-multiplier"].value or 1
+local output_multipliers = {}
+local speed_multipliers = {}
+for _, item in ipairs(items) do
+    output_multipliers[item.name] = settings.startup[item.name .. "-output-multiplier"].value
+    speed_multipliers[item.name] = settings.startup[item.name .. "-speed-multiplier"].value
 end
 
 --- Result amounts are uint16
@@ -25,8 +22,8 @@ local function multiply_amount(amount, multiplier)
 end
 
 local function update_item(item)
-    local output = get_output_multiplier(item.name)
-    local speed = get_speed_multiplier(item.name)
+    local output = output_multipliers[item.name]
+    local speed = speed_multipliers[item.name]
 
     for _, recipe_name in ipairs(item.recipes) do
         local recipe = data.raw.recipe[recipe_name]

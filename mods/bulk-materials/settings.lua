@@ -1,5 +1,10 @@
 local items = require("__bulk-materials__.items")
 
+--- Settings for Space Age-only items are hidden when Space Age isn't active
+local function hidden(item)
+    return (item.space_age and not mods["space-age"]) or nil
+end
+
 local setting_list = {{
     type = "bool-setting",
     name = "enable-normalized-rocket-weight",
@@ -16,7 +21,8 @@ for _, item in ipairs(items) do
         default_value = item.output,
         minimum_value = 1,
         maximum_value = 128,
-        order = item.order
+        order = item.order,
+        hidden = hidden(item)
     })
 end
 
@@ -29,7 +35,8 @@ for _, item in ipairs(items) do
         default_value = 1,
         minimum_value = 1,
         maximum_value = 25,
-        order = "z" .. item.order
+        order = "z" .. item.order,
+        hidden = hidden(item)
     })
 end
 
