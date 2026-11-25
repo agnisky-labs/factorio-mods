@@ -13,6 +13,8 @@ small, tested, checked in the real game, and every word a player reads is approv
   maintainer's voice, show the exact text, and commit it only once approved.
 - **A behaviour change gets a test** in `mods/<mod>/tests/`. `npm test` passes before anything is called done; when Factorio is
   installed, so does `npm run smoke` (both variants).
+- **Never guess about Factorio modding.** Look it up on https://lua-api.factorio.com (at the version the mod targets) and cite
+  the page; vanilla names and values come from the game's data, not memory. Details in `.claude/rules/lua.md`.
 - **Keep it small.** Don't add features, settings, tooling or process that weren't asked for. When a task grows, say so and ask.
 - **Docs follow process changes:** `README.md`, this file and the skills change in the same commit as the process they describe.
 - Lua rules: `.claude/rules/lua.md`. Workflow rules: `.claude/rules/github-actions.md`.

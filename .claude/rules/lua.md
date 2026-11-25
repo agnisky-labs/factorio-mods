@@ -6,8 +6,15 @@ paths:
 
 # Factorio mod Lua rules
 
-The mods run in Factorio's settings and data stages (Lua 5.2). The API is at https://lua-api.factorio.com/latest/ (prototypes under
-`/prototypes`, the data lifecycle under `/auxiliary/data-lifecycle.html`). The FMTK extension gives types and completion for it in VS Code.
+The mods run in Factorio's settings and data stages (Lua 5.2).
+
+**Never guess about the modding API. Look it up on https://lua-api.factorio.com**, at the version the mod targets
+(`https://lua-api.factorio.com/<version>/`, for example `2.0.77`, or `latest` for current stable). That covers prototypes and
+their properties, types, defaults, the runtime API, the data lifecycle (`/auxiliary/data-lifecycle.html`) and file formats
+(`/auxiliary/changelog-format.html`, `/auxiliary/mod-structure.html`). Read the page, or the machine-readable
+`prototype-api.json` / `runtime-api.json`, before writing code or text that depends on it, and say which page it came from.
+For vanilla prototype names and values, read the game's own data (`npm run smoke -- --keep` leaves a `data-raw-dump.json`) or
+its `data/` folder, not memory. If the docs don't answer it, say so and ask; don't fill the gap with an assumption.
 
 - **Everything `local`.** A global in data stage is shared with every other mod. Functions too: `local function`.
 - **Guard prototypes that may be absent.** Space Age, Quality and Elevated Rails are optional unless `info.json` requires them, and
