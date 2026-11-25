@@ -5,19 +5,21 @@ description: Add an item to Bulk Materials (an output and a speed multiplier for
 
 # Add an item to Bulk Materials
 
-An item touches five places in `mods/bulk-materials/`. `npm test` fails until all of them agree.
+New items start at 1x output (the maintainer may choose otherwise, but existing players' games must not change without asking).
+Look everything up in the game's data and https://lua-api.factorio.com, never from memory.
 
-1. **`data.lua`:** the item and its recipes in `base_items` (`["item"] = {"recipe", ...}`), its foundry or other Space Age recipes in
-   `foundry_items` when it has some, and its weight in `default_weight` (the vanilla Space Age weight, for normalized rocket weight).
-   Look up the recipe and item names in the game's prototypes (`data/base/prototypes/recipe.lua`, `data/space-age/...`) or on
-   https://wiki.factorio.com.
-2. **`settings.lua`:** `<item>-output-multiplier` (1 to 128) and `<item>-speed-multiplier` (1 to 25), with the next `order` letters
-   (`p`, `zp`, ...). The maintainer picks the default output multiplier.
-3. **`locale/en/strings.cfg`:** both setting names, and a description of the output multiplier giving the base recipe's yield.
-4. **`README.md`:** a row in the table, named the way the other rows are (plural, as players say it), and the same label in
-   `README_ROWS` in `tests/bulk-materials.test.mjs`. Show the maintainer the row and the locale text before committing.
-5. **`changelog.txt`:** "Added multipliers for <Item>. Base multiplier of x<n>" under Features, in the top section. When the top
-   section is already released, open the next version first (the `release` skill, or `npm run version -- bulk-materials minor`).
+1. **`mods/bulk-materials/items.lua`:** one entry at the end:
+   `{name = "<item>", order = "<next letter>", output = 1, recipes = {"<recipe>", ...}, weight = <vanilla weight>}`.
+   - Recipes: every vanilla recipe whose only item product is this item, from `data/base/prototypes/recipe.lua` and
+     `data/space-age/prototypes/recipe.lua`. `npm run smoke -- --space-age` lists recipes that make a listed item but aren't listed.
+   - Weight: the vanilla Space Age weight. Put any number in, run `npm run smoke -- --space-age`, and use the game's value from the
+     failure message (the smoke check compares every weight with the game).
+2. **`locale/en/strings.cfg`:** names and descriptions for `<item>-output-multiplier` and `<item>-speed-multiplier`, in the
+   same form as the others, with the base yield of each recipe from the game files.
+3. **`README.md`:** a row in the table, named the way the other rows are, and the same label in `README_ROWS` in
+   `tests/bulk-materials.test.mjs`.
+4. **Tests:** regenerate `tests/settings-snapshot.json` (only the two new settings may appear in its diff). If the item exists
+   only with Space Age, add it to `SPACE_AGE_ONLY` in the test, and its other Space Age recipes to `FOUNDRY`.
+5. **`changelog.txt`:** "Added multipliers for <Item>. Base multiplier of x<n>" under Features, in the top section.
 
-If the item exists only with Space Age, add it to `SPACE_AGE_ONLY` in `tests/bulk-materials.test.mjs`, and its Space Age recipes to
-`FOUNDRY` there, so the base-only tests leave it out. Then `npm test`.
+Show the maintainer the locale lines, README row and changelog entry before committing. Then `npm test` and both smoke variants.

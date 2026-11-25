@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { dirname, join } from 'node:path';
 import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { readLocale } from '../../../scripts/lib/locale.mjs';
 import { readSettings, runDataStage, startupDefaults } from '../../../scripts/lib/lua.mjs';
 import { readText } from '../../../scripts/lib/mods.mjs';
 
@@ -12,12 +13,14 @@ const SETTINGS = readSettings(DIR);
 // The items the mod multiplies, from the names of its output settings.
 const ITEMS = SETTINGS.filter((s) => s.name.endsWith('-output-multiplier')).map((s) => s.name.replace(/-output-multiplier$/, ''));
 const SPACE_AGE_ONLY = ['artificial-yumako-soil', 'artificial-jellynut-soil', 'quantum-processor'];
+// Space Age recipes for the items, other than the ones named after them.
 const FOUNDRY = {
   'casting-iron-gear-wheel': 'iron-gear-wheel',
   'casting-iron-stick': 'iron-stick',
   'casting-steel': 'steel-plate',
   'concrete-from-molten-iron': 'concrete',
   'casting-low-density-structure': 'low-density-structure',
+  biosulfur: 'sulfur',
 };
 
 function recipe(name, product, amount = 1, energy = 1) {
@@ -47,6 +50,18 @@ function every(suffix, value) {
 }
 
 describe('settings', () => {
+  // Players' saved values are keyed by these names, so names, defaults, limits and order must not drift.
+  // Adding an item adds entries here on purpose; regenerate the snapshot only for that.
+  test('match the snapshot', () => {
+    const snapshot = JSON.parse(readText(join(DIR, 'tests', 'settings-snapshot.json')));
+    assert.deepEqual([...SETTINGS].sort((a, b) => a.name.localeCompare(b.name)), snapshot);
+  });
+
+  test('every setting has an English description', () => {
+    const descriptions = readLocale(DIR).en['mod-setting-description'] ?? {};
+    for (const s of SETTINGS) assert.ok(descriptions[s.name], `no description for ${s.name}`);
+  });
+
   test('every item has an output and a speed multiplier', () => {
     const names = SETTINGS.map((s) => s.name);
     for (const item of ITEMS) assert.ok(names.includes(`${item}-speed-multiplier`), `${item}-speed-multiplier`);
@@ -82,6 +97,21 @@ describe('output multipliers', () => {
     for (const [name, item] of Object.entries(FOUNDRY)) assert.equal(raw.recipe[name].results[0].amount, 6, `${name} (${item})`);
   });
 
+  test('multiply amount_min and amount_max when a result has no amount', () => {
+    const raw = fixture({ spaceAge: true });
+    raw.recipe['iron-gear-wheel'].results = [{ type: 'item', name: 'iron-gear-wheel', amount_min: 1, amount_max: 3 }];
+    const out = run({ raw, settings: { 'iron-gear-wheel-output-multiplier': 4 } });
+    const [result] = out.recipe['iron-gear-wheel'].results;
+    assert.deepEqual([result.amount, result.amount_min, result.amount_max], [undefined, 4, 12]);
+  });
+
+  test('never go over 65535, the largest amount a result can have', () => {
+    const raw = fixture({ spaceAge: true });
+    raw.recipe['iron-gear-wheel'].results[0].amount = 1000;
+    const out = run({ raw, settings: { 'iron-gear-wheel-output-multiplier': 128 } });
+    assert.equal(out.recipe['iron-gear-wheel'].results[0].amount, 65535);
+  });
+
   test('leave recipes of other mods alone', () => {
     const raw = fixture({ spaceAge: true });
     raw.recipe['other-gears'] = recipe('other-gears', 'iron-gear-wheel', 1, 1);
@@ -103,6 +133,22 @@ describe('speed multipliers', () => {
     delete raw.recipe['iron-gear-wheel'].energy_required;
     const out = run({ raw, settings: { 'iron-gear-wheel-speed-multiplier': 5 } });
     assert.equal(out.recipe['iron-gear-wheel'].energy_required, 0.1);
+  });
+
+  test('leave the time alone at 1x, even for very fast recipes', () => {
+    const raw = fixture({ spaceAge: true });
+    raw.recipe['iron-gear-wheel'].energy_required = 0.01;
+    delete raw.recipe['iron-stick'].energy_required;
+    const out = run({ raw });
+    assert.equal(out.recipe['iron-gear-wheel'].energy_required, 0.01);
+    assert.equal(out.recipe['iron-stick'].energy_required, undefined);
+  });
+
+  test('never slow down a recipe that is already under 0.02 seconds', () => {
+    const raw = fixture({ spaceAge: true });
+    raw.recipe['iron-gear-wheel'].energy_required = 0.015;
+    const out = run({ raw, settings: { 'iron-gear-wheel-speed-multiplier': 5 } });
+    assert.equal(out.recipe['iron-gear-wheel'].energy_required, 0.015);
   });
 
   test('never take a recipe below 0.02 seconds', () => {

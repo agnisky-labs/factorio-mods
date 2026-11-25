@@ -121,10 +121,22 @@ export function runStage(dir, files, { raw = {}, settings = {}, mods = { base: '
   const L = lauxlib.luaL_newstate();
   lualib.luaL_openlibs(L);
 
-  lua.lua_getglobal(L, to_luastring('package'));
-  lua.lua_pushstring(L, to_luastring(`${dir.replace(/\\/g, '/')}/?.lua`));
-  lua.lua_setfield(L, -2, to_luastring('path'));
-  lua.lua_pop(L, 1);
+  // require("file") from the mod root, and require("__<mod>__.file") for the mod's own files.
+  const root = dir.replace(/\\/g, '/');
+  const infoPath = join(dir, 'info.json');
+  const modName = existsSync(infoPath) ? JSON.parse(readFileSync(infoPath, 'utf8')).name : '';
+  const searcher = `
+    package.path = ${JSON.stringify(`${root}/?.lua`)}
+    table.insert(package.searchers, 2, function(name)
+      local mod, file = name:match("^__([%w%-_]+)__[%./](.+)$")
+      if not mod then return nil end
+      if mod ~= ${JSON.stringify(modName)} then return "\\n\\tno other mods in the test harness: " .. mod end
+      local path = ${JSON.stringify(root)} .. "/" .. file:gsub("%.lua$", ""):gsub("%.", "/") .. ".lua"
+      local chunk, err = loadfile(path)
+      if not chunk then return "\\n\\t" .. err end
+      return chunk
+    end)`;
+  check(L, lauxlib.luaL_dostring(L, to_luastring(searcher)), 'require setup');
 
   push(L, structuredClone(raw));
   lua.lua_setglobal(L, to_luastring('__raw'));
@@ -158,7 +170,17 @@ export function runStage(dir, files, { raw = {}, settings = {}, mods = { base: '
   return result;
 }
 
-const SETTING_TYPES = ['bool-setting', 'int-setting', 'double-setting', 'string-setting', 'color-setting'];
+/** The value a mod file returns (for example a data table like items.lua), run with no stage globals. */
+export function readReturn(dir, file) {
+  const L = lauxlib.luaL_newstate();
+  lualib.luaL_openlibs(L);
+  const source = readFileSync(join(dir, file));
+  check(L, lauxlib.luaL_loadbuffer(L, source, source.length, to_luastring(`@${file}`)), `loading ${file}`);
+  check(L, lua.lua_pcall(L, 0, 1, 0), `running ${file}`);
+  return read(L, -1);
+}
+
+const SETTING_TYPES =['bool-setting', 'int-setting', 'double-setting', 'string-setting', 'color-setting'];
 
 /** The mod's setting prototypes, from settings.lua, settings-updates.lua and settings-final-fixes.lua. */
 export function readSettings(dir, options = {}) {
