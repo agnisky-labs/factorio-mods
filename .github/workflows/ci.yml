@@ -14,7 +14,7 @@ permissions:
 env:
   # The Factorio the mods are loaded in. Its major.minor must be the factorio_version in the mods' info.json: when the mods move to a
   # new Factorio (2.1), this moves with them. Versions: https://factorio.com/download/archive
-  FACTORIO_VERSION: 2.0.77
+  FACTORIO_VERSION: 2.1.25
 
 jobs:
   test:

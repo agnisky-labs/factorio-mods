@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { describe, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { readLocale } from '../../../scripts/lib/locale.mjs';
-import { readSettings, runDataStage, startupDefaults } from '../../../scripts/lib/lua.mjs';
+import { ALL_DLC, readSettings, runDataStage, startupDefaults } from '../../../scripts/lib/lua.mjs';
 import { readText } from '../../../scripts/lib/mods.mjs';
 
 const DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -52,9 +52,16 @@ function every(suffix, value) {
 describe('settings', () => {
   // Players' saved values are keyed by these names, so names, defaults, limits and order must not drift.
   // Adding an item adds entries here on purpose; regenerate the snapshot only for that.
-  test('match the snapshot', () => {
+  test('match the snapshot (with Space Age)', () => {
     const snapshot = JSON.parse(readText(join(DIR, 'tests', 'settings-snapshot.json')));
-    assert.deepEqual([...SETTINGS].sort((a, b) => a.name.localeCompare(b.name)), snapshot);
+    const settings = readSettings(DIR, { mods: ALL_DLC });
+    assert.deepEqual([...settings].sort((a, b) => a.name.localeCompare(b.name)), snapshot);
+  });
+
+  test('hide only the Space Age-only items without Space Age', () => {
+    const hidden = readSettings(DIR, { mods: { base: '2.1.0' } }).filter((s) => s.hidden).map((s) => s.name).sort();
+    const expected = SPACE_AGE_ONLY.flatMap((item) => [`${item}-output-multiplier`, `${item}-speed-multiplier`]).sort();
+    assert.deepEqual(hidden, expected);
   });
 
   test('every setting has an English description', () => {

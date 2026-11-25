@@ -1,4 +1,21 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.0
+Date: 25. 11. 2026
+  Changes:
+    - Updated for Factorio 2.1
+    - Artificial soil and quantum processor settings are hidden when Space Age is not enabled
+  Features:
+    - Sulfur multipliers now also apply to Biosulfur
+    - Added descriptions for all settings
+  Bugfixes:
+    - Fixed crash when normalized rocket weight was enabled without Space Age
+    - Fixed flying robot frame getting the wrong weight with normalized rocket weight enabled
+    - Fixed crash with mods that give these recipes a random result amount
+    - Fixed speed multiplier slowing down recipes that were already faster than 0.02 seconds
+    - Fixed concrete setting description showing the wrong amount per craft
+  Info:
+    - In Factorio 2.1, items with a higher production multiplier recycle faster, but each recycle returns less
+---------------------------------------------------------------------------------------------------
 Version: 1.0.1
 Date: 02. 08. 2025
   Changes:
