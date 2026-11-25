@@ -1,0 +1,22 @@
+{
+  "name": "factorio-mods",
+  "private": true,
+  "description": "Factorio mods by Agentwhisky, with the shared scripts that test, version and package them.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.mjs\" \"mods/*/tests/**/*.test.mjs\"",
+    "version": "node scripts/version.mjs",
+    "package": "node scripts/package.mjs",
+    "link": "node scripts/link.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "changelog": "node scripts/changelog-section.mjs",
+    "api-diff": "node scripts/api-diff.mjs"
+  },
+  "devDependencies": {
+    "fengari": "^0.1.5",
+    "fflate": "^0.8.3"
+  }
+}

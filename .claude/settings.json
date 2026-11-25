@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test*)",
+      "Bash(npm run package*)",
+      "Bash(npm run changelog*)",
+      "Bash(npm run smoke*)",
+      "Bash(npm run api-diff*)",
+      "Bash(node --test*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git mv*)"
+    ],
+    "deny": [
+      "Read(./node_modules/**)",
+      "Read(./dist/**)",
+      "Read(./archive/**)",
+      "Bash(git push*)"
+    ]
+  }
+}

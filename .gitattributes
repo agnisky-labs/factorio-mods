@@ -1,0 +1,7 @@
+# One line ending for every text file, on every platform. The scripts and tests read files line by line.
+* text=auto eol=lf
+
+# Never converted.
+*.png binary
+*.jpg binary
+*.zip binary

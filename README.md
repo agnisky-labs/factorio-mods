@@ -1,27 +1,44 @@
+# Factorio Mods
 
-# Bulk Materials
+My Factorio mods.
 
-#### Adds item production and speed multipliers for certain items. 
+| Mod | Description |
+| :-- | :-- |
+| [Bulk Materials](mods/bulk-materials/README.md) | Production and speed multipliers for gears, circuits, steel, concrete and other intermediates |
 
-| Item | Default Production Multiplier | Default Speed Multiplier |
-| :-------- | :------- | :------- |
-| `Iron Gears` | `4x` | `1x` |
-| `Iron Sticks` | `4x` | `1x` |
-| `Steel Plate` | `2x` | `1x` |
-| `Concrete` | `4x` | `1x` |
-| `Engine Units` | `4x` | `1x` |
-| `Electric Engine Units` | `2x` | `1x` |
-| `Electronic Circuits (green)` | `16x` | `1x` |
-| `Advanced Circuits (red)` | `16x` | `1x` |
-| `Processing Units (blue)` | `16x` | `1x` |
-| `Low Density Structures` | `2x` | `1x` |
-| `Flying Robot Frames` | `2x` | `1x` |
-| `Artificial Soil` | `4x` | `1x` |
-| `Quantum Processors` | `1x` | `1x` |
-| `Sulfur` | `1x` | `1x` |
+Each version is on the [Releases](../../releases) page. Older zips are in [archive](archive/).
 
-- You can set the multipliers from 1x(base) to 128x.
-- Production and Speed multipliers are separate so you can choose to modify both or neither, depending on your needs.
-- Speed multipliers are all 1x by default
-- Default multipliers are personal preferences and are in no way balanced
-- A toggle is available to utilize the vanilla Space Age item weight calculation instead of the weight calculated with active multipliers
+## Development
+
+Needs Node 24.
+
+```sh
+npm install
+npm test
+npm run package -- bulk-materials
+```
+
+`npm run link -- bulk-materials` links the mod folder into `%APPDATA%\Factorio\mods` so the game loads it straight from here.
+Move any `bulk-materials_*.zip` out of the mods folder while it's linked. `--unlink` removes the link.
+
+`npm run smoke` loads every mod in Factorio and creates a save, using a temporary config so saves and the mod list aren't touched.
+Set `FACTORIO_BIN` to the game executable. Add `--space-age` to load with Space Age.
+
+Lua linting (luacheck) only runs on GitHub.
+
+## Releasing
+
+1. `npm run version -- bulk-materials patch` (or minor, major, x.y.z). This sets the version in `info.json` and adds a section
+   to `changelog.txt`.
+2. Fill in the changelog, then `npm test`.
+3. Commit and merge to main.
+4. On GitHub, Actions, Release, Run workflow, and pick the mod. It tags `bulk-materials/v<version>`, runs the checks and
+   creates the release with `bulk-materials_<version>.zip`. Tick dry run to check everything without releasing. Pushing the
+   tag yourself does the same.
+5. Upload the zip to the mod portal.
+
+## New Factorio versions
+
+`npm run api-diff -- <old> <new> bulk-materials` writes a report of the modding changes between two Factorio versions,
+from the API docs and the game's changelog, starting with the ones that touch what the mod uses. Reports are kept in
+[docs/factorio-updates](docs/factorio-updates/).

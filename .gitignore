@@ -1,1 +1,6 @@
-bulk-materials*.zip
+node_modules/
+dist/
+.factorio/
+*.zip
+# Releases from before the GitHub Releases workflow, kept for reference. New zips live on GitHub Releases only.
+!archive/**/*.zip
