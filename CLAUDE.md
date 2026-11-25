@@ -29,6 +29,7 @@ small, tested, checked in the real game, and every word a player reads is approv
 | `tests/` | Checks every mod gets: info.json, changelog format, settings against locale, the zip, the writing check. |
 | `scripts/` | The npm scripts. `scripts/lib/lua.mjs` runs a mod's Lua in Node against mock `data.raw`. |
 | `docs/factorio-updates/` | `api-diff` reports, one per Factorio version change. |
+| `docs/roadmap.md` | Future work, not yet scheduled. |
 | `archive/<name>/` | Zips from before GitHub Releases. Never changed or read. |
 
 ## Commands
