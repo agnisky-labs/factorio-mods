@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.0.1
-Date: 8. 2. 2025
+Date: 02. 08. 2025
   Changes:
     - Updated the major version number to 1 as it seemed more fitting
     - Included optional hidden dependency for factorio+ to ensure bulk materials applies its changes after

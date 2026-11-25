@@ -57,7 +57,7 @@ local function get_speed_multiplier(name)
     return settings.startup[name .. "-speed-multiplier"].value or 1
 end
 
-function update_recipes(items)
+local function update_recipes(items)
     for item, recipes in pairs(items) do
         for _, recipe_name in ipairs(recipes) do
             local recipe = data.raw.recipe[recipe_name]
@@ -79,9 +79,10 @@ function update_recipes(items)
             end
         end
 
-        --- Update item weight
-        if normalize_weight then
-            data.raw['item'][item].weight = default_weight[item]
+        --- Update item weight (Space Age items are absent without it)
+        local prototype = data.raw['item'][item]
+        if normalize_weight and prototype then
+            prototype.weight = default_weight[item]
         end
     end
 end

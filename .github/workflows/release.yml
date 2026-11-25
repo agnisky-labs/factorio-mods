@@ -1,0 +1,109 @@
+# A GitHub Release of one mod, from a tag <mod>/v<version> (for example bulk-materials/v1.0.2) pushed by hand. It checks that the tag
+# names the version in the mod's info.json and that changelog.txt has its section, runs CI on the tagged commit, then publishes the
+# release with the zip attached and the changelog section as notes. The mod portal upload stays by hand.
+# Run by hand (workflow_dispatch) with a tag that exists, it's a dry run: everything but the release itself (its CI runs on the branch
+# picked in the Run workflow form, the checks and the zip on the tag).
+name: Release
+
+on:
+  push:
+    tags: ['*/v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'An existing tag <mod>/v<version>: a dry run that builds and checks it but publishes nothing'
+        type: string
+        required: true
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mod: ${{ steps.tag.outputs.mod }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: The tag, info.json and the changelog agree
+        id: tag
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if [[ ! "$TAG" =~ ^([a-z0-9_-]+)/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "The tag '$TAG' is not <mod>/v<x.y.z>." >&2
+            exit 1
+          fi
+          MOD="${BASH_REMATCH[1]}"
+          VERSION="${BASH_REMATCH[2]}"
+          if [ ! -f "mods/$MOD/info.json" ]; then
+            echo "No mod '$MOD' under mods/." >&2
+            exit 1
+          fi
+          ACTUAL=$(node -p "require('./mods/$MOD/info.json').version")
+          if [ "$VERSION" != "$ACTUAL" ]; then
+            echo "The tag says $VERSION, mods/$MOD/info.json says $ACTUAL." >&2
+            exit 1
+          fi
+          npm run -s changelog -- "$MOD" "$VERSION" > /dev/null
+          echo "mod=$MOD" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    needs: check
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Publish the release
+    needs: [check, ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build the zip and the notes
+        env:
+          MOD: ${{ needs.check.outputs.mod }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          npm run package -- "$MOD"
+          npm run -s changelog -- "$MOD" "$VERSION" > "$RUNNER_TEMP/notes.md"
+          ls -l "dist/${MOD}_${VERSION}.zip"
+          cat "$RUNNER_TEMP/notes.md"
+
+      - name: Publish
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          MOD: ${{ needs.check.outputs.mod }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          TITLE="$(node -p "require('./mods/$MOD/info.json').title") $VERSION"
+          gh release create "$TAG" "dist/${MOD}_${VERSION}.zip" --verify-tag --title "$TITLE" --notes-file "$RUNNER_TEMP/notes.md"

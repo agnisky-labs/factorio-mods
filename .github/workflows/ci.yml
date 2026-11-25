@@ -1,0 +1,94 @@
+# Every push: npm test, the zips, luacheck, and a load of every mod in the Factorio headless server (base only and with Space Age),
+# which also checks every prototype a mod looks up exists. Release calls this before publishing.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  # The Factorio the mods are loaded in. Its major.minor must be the factorio_version in the mods' info.json: when the mods move to a
+  # new Factorio (2.1), this moves with them. Versions: https://factorio.com/download/archive
+  FACTORIO_VERSION: 2.0.77
+
+jobs:
+  test:
+    name: Tests and zips
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - run: npm run package
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mods
+          path: dist/*.zip
+          retention-days: 14
+
+  lint:
+    name: Lua lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: leafo/gh-actions-lua@v13
+        with:
+          luaVersion: '5.2'
+
+      - uses: leafo/gh-actions-luarocks@v6
+
+      - run: luarocks install luacheck 1.2.0
+
+      - run: luacheck mods
+
+  smoke:
+    name: Load in Factorio (${{ matrix.variant }})
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [base, space-age]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache the headless server
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/factorio
+          key: factorio-headless-${{ env.FACTORIO_VERSION }}
+
+      - name: Download the headless server
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: curl -fsSL "https://factorio.com/get-download/$FACTORIO_VERSION/headless/linux64" | tar -xJ -C "$RUNNER_TEMP"
+
+      - name: Load every mod
+        env:
+          FACTORIO_BIN: ${{ runner.temp }}/factorio/bin/x64/factorio
+        run: npm run smoke -- ${{ matrix.variant == 'space-age' && '--space-age' || '' }}
